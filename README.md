@@ -63,4 +63,5 @@ Total RAM:  6131 GB |Alloc RAM:  2520 GB |Free RAM:  3611 GB |RAM Usage:  % 41
 Total GPUs:  29  | Total GPUs Used:  26
 ```
 And a screenshot showing output with colors...
+
 <img width="485" alt="Screenshot 2024-12-06 at 9 03 45 AM" src="https://github.com/user-attachments/assets/068a7659-07ea-41c4-811f-daeb3238525d">
