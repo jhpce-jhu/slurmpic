@@ -6,8 +6,8 @@ A program to provide status for the compute nodes in a SLURM cluster. The script
 
 The "slurmpic" script has been tested on 2 SLURM clusters, and the only customizations that have been needed are:
 
-1 - set the DEFAULT_PARTITION to be the default partition on your cluster
-2 - set GPU_PARTITIONS to be the partitions on your cluster that have GPUs
+- set the DEFAULT_PARTITION to be the default partition on your cluster
+- set GPU_PARTITIONS to be the partitions on your cluster that have GPUs
 
 
 ## Usage:
