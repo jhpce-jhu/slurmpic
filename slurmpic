@@ -1,6 +1,7 @@
 #!/bin/bash
 
-gpu_partitions='caracol,bstgpu,gpu,neuron,gee,bstgpu2,bstgpu3'
+DEFAULT_PARTITION="shared"
+GPU_PARTITIONS='caracol,bstgpu,gpu,neuron,gee,bstgpu2,bstgpu3'
 
 # print extended RAM use statistics? by default no (0)
 ramstats=0
@@ -32,7 +33,7 @@ if [[ "${whereami}" =~ "compute-13" ]]; then
 elif [[ "${whereami}" =~ "jhpcecms01" ]]; then
 	PARTITION="-p cms"
 else
-	PARTITION="-p shared"
+	PARTITION="-p $DEFAULT_PARTITION"
 fi
 
 while [[ $# -gt 0 ]]
@@ -53,7 +54,7 @@ do
       shift # past value
       ;;
     -g|--gpu)
-      PARTITION="-p $gpu_partitions"
+      PARTITION="-p $GPU_PARTITIONS"
       gpustats=1
       SINFOOPTS=${SINFOOPTS}",Gres:.60,GresUsed:.60"
       shift # past value
