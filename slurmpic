@@ -1,0 +1,255 @@
+#!/bin/bash
+
+gpu_partitions='caracol,bstgpu,gpu,neuron,gee,bstgpu2,bstgpu3'
+
+# print extended RAM use statistics? by default no (0)
+ramstats=0
+gpustats=0
+
+SINFOOPTS="Nodelist:12,StateComplete:40,Partition:10,CPUsState:.16,CPUsLoad:.10,Memory:.8,AllocMem:.10,FreeMEM:.10"
+
+usage() {
+      echo "`basename $0`: Used to display a summary of JHPCE SLURM node usage"
+      echo "Usage: `basename $0` [-p|--partition PARTITION] [-a|--all] [-g|--gpu] [-r|--ramstats]"
+      echo "       -p | --partition   Show information for a specific partition."
+      echo "                          The shared partition is shown by default."
+      echo "                          Summary statistics are for specified partition(s)."
+      echo "                          Summary statistics exclude nodes in DOWN, DRAIN & RESERVED states."
+      echo "                          Per-node CPU/RAM used values are for all jobs on that node, from all partitions"
+      echo "       -a | --all         Show information for all partitions."
+      echo "       -g | --gpu         Show information for all GPU partitions."
+      echo "       -r | --ramstats    Show extended information about RAM allocation."
+      echo "                          SYSFREEMEM not precise! It includes buffered/cached memory usage."
+}
+
+whereami=`/usr/bin/hostname`
+  
+# Purpose of this if statement is to allow C-SUB users to
+# be able to use slurmpic to see their default partition
+# without having to specify its name.
+if [[ "${whereami}" =~ "compute-13" ]]; then
+	PARTITION="-p cms"
+elif [[ "${whereami}" =~ "jhpcecms01" ]]; then
+	PARTITION="-p cms"
+else
+	PARTITION="-p shared"
+fi
+
+while [[ $# -gt 0 ]]
+do
+      case $1 in
+    -p|--partition)
+      if [ -z "$2" ]
+      then
+        echo "Error: The -p option must be followed by partition name"
+        exit 1
+      fi
+      PARTITION="-p $2"
+      shift # past argument
+      shift # past value
+      ;;
+    -a|--all)
+      PARTITION=""
+      shift # past value
+      ;;
+    -g|--gpu)
+      PARTITION="-p $gpu_partitions"
+      gpustats=1
+      SINFOOPTS=${SINFOOPTS}",Gres:.60,GresUsed:.60"
+      shift # past value
+      ;;
+    -r|--ramstat|--ramstats)
+      ramstats=1
+      shift # past value
+      ;;
+    -k|--key)
+      echo "Color Key: Red - Very low resources, Yellow - Sorta low resources, Green - OK"
+      echo "Color Key: Blue - Negative"
+      exit 1
+      ;;
+    -h|--help|-?)
+      usage
+      exit 0
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      usage
+      exit 1
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
+# print the appropriate starting column titles - short or extended ram statistics
+if [ ${ramstats} -gt 0 ]
+then
+	echo -n "NODENAME      NODESTATE CPUS_A/T CPU_LOAD  TOT_MEM FREEMEM SYSFREEMEM ALLOC  USED   GAP PARTITIONS"
+elif [ ${gpustats} -gt 0 ]
+then
+	echo -n "NODENAME      NODESTATE CPUS_A/T CPU_LOAD  TOT_MEM FREEMEM SYSFREEMEM  GPUS  PARTITIONS"
+else
+	echo -n "NODENAME      NODESTATE CPUS_A/T CPU_LOAD  TOT_MEM FREEMEM SYSFREEMEM PARTITIONS"
+fi
+
+# BEGIN { OFMT = "%.0f"  # print numbers as integers (rounds) }
+# JRT added this to try to round stats better than w/o it.
+# He is unsure if it works as hoped
+
+# MM - Move sinfo options to be defined at top of script, to allow GPU options
+
+sinfo -h $PARTITION -N -O  $SINFOOPTS | awk -v ramvar="$ramstats" -v gpuvar="$gpustats" 'BEGIN { OFMT = "%.0f" }; {
+    CLEAR="\033[0m";
+    RED="\033[31m";
+    GREEN="\033[32m";
+    YELLOW="\033[33m";
+    BLUE="\033[34m";
+    MAGENTA="\033[35m";
+    CYAN="\033[36m";
+    WHITE="\033[37m";
+
+    # $1 = Nodelist
+    # $2 = StateComplete
+    # $3 = Partition
+    # $4 = CPUsState
+    # $5 = CPUsLoad
+    # $6 = Memory
+    # $7 = AllocMem
+    # $8 = FreeMEM
+
+    # $6 = TOT_MEM
+    # $7 = ALLOC_MEM
+    # $6 - $7 = FREERAM # as-far-as-slurm-is-concerned
+    # $8 = SYSFREEMEM
+
+    # For GPUs:
+    # $9 = GPU Total  Format: gpu:tesv100:2,gpu:titanv:1
+    # $10 = GPU Used  Format: gpu:tesv100:1(IDX:0),gpu:titanv:0(IDX:N/A)
+
+    if (LASTNODENAME == $1) { printf(",%s", $3); next; }
+
+    FREECORECOLOR=GREEN;
+    split($4,CORES,"/");
+    if (CORES[2] < 10 ) { FREECORECOLOR=YELLOW; }
+    if (CORES[2] < 2  ) { FREECORECOLOR=RED; }
+
+    FREERAMCOLOR=GREEN;
+    if (($6-$7) < 51200) { FREERAMCOLOR=YELLOW; }
+    if (($6-$7) < 9216)  { FREERAMCOLOR=RED; }
+
+    FREERAM=$6-$7
+
+    SYSFREERAMCOLOR=WHITE;
+    GAPCOLOR=GREEN;
+    ALLOC_MEM=$7
+    USED_MEM=($6-$8) # TOT_MEM - SYSFREEMEM
+    GAP=ALLOC_MEM-USED_MEM # too much allocated vs used
+    if (GAP > 81920)
+    	{ GAPCOLOR=RED; OVERALLOC80+=GAP; OVERALLOC+=GAP; }
+    else if (GAP > 51200)
+    	{ GAPCOLOR=YELLOW; OVERALLOC50+=GAP; OVERALLOC+=GAP; }
+    else if (GAP > 0)
+    	{ GAPCOLOR=GREEN; OVERALLOC050+=GAP; OVERALLOC+=GAP; }
+    else if (GAP < 0) 
+    	{ GAPCOLOR=BLUE; OVERUSE+=GAP; }
+
+    # JRT put OVERALLOC+=GAP above in if structure instead of here because he wanted to exclude
+    # negative GAP values. Is that misleading in totals calculations?
+
+    STATE=substr($2,1,9)
+    STATECOLOR=CLEAR
+#    if ( $2~/idle/ ) {  STATECOLOR=GREEN; STATE="IDLE"; }
+    if ( $2~/idle/ ) {  STATECOLOR=GREEN; }
+    if ( $2~/drain/ ) {  STATECOLOR=RED; STATE="DRAIN"; }
+    if ( $2~/down/ ) {  STATECOLOR=RED; STATE="DOWN"; }
+    if ( $2~/reserved/ ) {  STATECOLOR=BLUE; STATE="RESERVED"; }
+    # note that these totals only include the specified partition(s)
+    # MM - 2024-01-17 - exclude node from Totals if node is not available
+    if ( ! ( STATE == "DRAIN" ) || ( STATE == "DOWN" ) || ( STATE == "RESERVED" ) ) {
+        USEDCORES+=CORES[1]
+        TOTCORES+=CORES[4]
+        TOTRAM+=$6
+        USEDRAM+=$7
+    }
+
+    if (ramvar > 0)
+    {
+        printf "\n%11s %s %10s %s%4s/%3s%s %8.2f %5d GB %s%4d GB\033[0m %s%7d GB\033[0m %5d %5d %s%5d\033[0m  %s %-s", $1, STATECOLOR, STATE, FREECORECOLOR, CORES[1], CORES[4], CLEAR, $5, $6/1024, FREERAMCOLOR, ($6-$7)/1024, SYSFREERAMCOLOR, $8/1024, ALLOC_MEM/1024, USED_MEM/1024, GAPCOLOR, GAP/1024, CLEAR, $3;
+    }
+# Deal with GPU option
+    else if (gpuvar > 0)
+    { 
+        GPUUSED=0
+        GPUTOT=0
+#print  "A"
+#print "TOT is ", $9
+#print "USED is ", $10
+        split($9,GPUTOTARRAY,",")
+        split($10,GPUUSEDARRAY,",")
+        for (GPU in GPUUSEDARRAY) {
+            split(GPUUSEDARRAY[GPU],GPUSPLIT,":")
+#            GPUCOUNT=gensub(/\(.*$/,//,GPUSPLIT[3])
+            GPUUSED+=GPUSPLIT[3]
+#print "B"
+#print GPUUSEDARRAY[GPU],GPUUSED
+        }
+        for (GPU in GPUTOTARRAY) {
+            split(GPUTOTARRAY[GPU],GPUSPLIT,":")
+            GPUCOUNT=gensub(/(.+)\(.+$/,"\\1","g",GPUSPLIT[3])
+            GPUTOT+=GPUCOUNT
+        }
+#        GPUUSED=GPUUSEDARRAY[3]+GPUUSEDARRAY[6]+GPUUSEDARRAY[9]+GPUUSEDARRAY[12]
+#        GPUTOT=GPUTOTARRAY[3]+GPUTOTARRAY[6]+GPUTOTARRAY[9]+GPUTOTARRAY[12]
+        GPUGRANDTOT+=GPUTOT
+        GPUGRANDTOTUSED+=GPUUSED
+#print "Totals: ", GPUUSED, GPUTOT, GPUGRANDTOTUSED, GPUGRANDTOT
+        printf "\n%11s %s %10s %s%4s/%3s\033[0m %8.2f %5d GB %s%4d GB\033[0m %7d GB %s%2s/%2s %-s", $1, STATECOLOR, STATE, FREECORECOLOR, CORES[1], CORES[4], $5, $6/1024, FREERAMCOLOR, ($6-$7)/1024, $8/1024, CLEAR, GPUUSED, GPUTOT, $3;
+    }
+    else
+    {
+        printf "\n%11s %s %10s %s%4s/%3s\033[0m %8.2f %5d GB %s%4d GB\033[0m %7d GB %s %-s", $1, STATECOLOR, STATE, FREECORECOLOR, CORES[1], CORES[4], $5, $6/1024, FREERAMCOLOR, ($6-$7)/1024, $8/1024, CLEAR, $3;
+    }
+    LASTNODENAME=$1
+
+} END {
+# print the appropriate closing column titles - short or extended ram statistics
+if (ramvar > 0)
+{
+    print "\nNODENAME      NODESTATE CPUS_A/T CPU_LOAD  TOT_MEM FREEMEM SYSFREEMEM ALLOC  USED   GAP PARTITIONS"
+}
+else if (gpuvar > 0)
+{
+print "\nNODENAME      NODESTATE CPUS_A/T CPU_LOAD  TOT_MEM FREEMEM SYSFREEMEM PARTITIONS"
+	echo -n "NODENAME      NODESTATE CPUS_A/T CPU_LOAD  TOT_MEM FREEMEM SYSFREEMEM  GPUS  PARTITIONS"
+}
+else
+{
+print "\nNODENAME      NODESTATE CPUS_A/T CPU_LOAD  TOT_MEM FREEMEM SYSFREEMEM PARTITIONS"
+}
+# always print this summary block
+{
+printf "Total Cores: %6s |Alloc Cores: %6s |Idle Cores: %6s |Core Usage: %%%3d\nTotal RAM: %5d GB |Alloc RAM: %5d GB |Free RAM: %5d GB |RAM Usage:  %%%3d\n",TOTCORES,USEDCORES,TOTCORES-USEDCORES,100*USEDCORES/TOTCORES,TOTRAM/1024,USEDRAM/1024,TOTRAM/1024-USEDRAM/1024,100*USEDRAM/TOTRAM; 
+}
+# only print ramstats summary block when specified
+# 20231214 - temporaily always print extra RAM stats
+# 20231215 - MM set back to being only run when extra RAM stats option. This was interfering with
+# the hourly "slurmpic" I run to get the %CORE and %RAM used in the banner message
+if (ramvar > 0)
+{
+printf "Over-Allocated RAM (GB): 0-50: %s%5d\033[0m | 50-80: %s%5d\033[0m | 80+: %s%5d\033[0m | Total: %s%5d\033[0m GB\n",GREEN,OVERALLOC050/1024,YELLOW,OVERALLOC50/1024,RED,OVERALLOC80/1024,RED,OVERALLOC/1024;
+# JRT used %5.0f to try to more accurately round that %5d
+printf "As %% of partition RAM:   0-50: %s%5.0f\033[0m | 50-80: %s%5.0f\033[0m | 80+: %s%5.0f\033[0m | Total: %s%5.0f\033[0m GB\n",GREEN,100*OVERALLOC050/TOTRAM,YELLOW,100*OVERALLOC50/TOTRAM,RED,100*OVERALLOC80/TOTRAM,RED,100*OVERALLOC/TOTRAM;
+printf "Used above allocated: %s%5d\033[0m GB\n",BLUE,OVERUSE/1024;
+}
+
+if (gpuvar > 0)
+{
+    printf "Total GPUs:  %s  | Total GPUs Used:  %s\n", GPUGRANDTOT, GPUGRANDTOTUSED;
+
+}
+
+}'
+
+exit 0
