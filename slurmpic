@@ -1,4 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# JHPCE - slurmpic - Provide a "picture" of what's going on with your 
+# slurm nodes
+#
+# Copyright (c) 2024 Marcus Miller Johns Hopkins Bloomberg School of Public Health
+# This script is licensed under the The MIT License (MIT). 
+# 
+# Authors - Marcus Miller marcus@jhu.edu
+#           Jeffrey Tunison
+#
+# Version: 0.1
+#
+#--------------------------------------------------------------------------
+# Date		Modification					   Initials
+#--------------------------------------------------------------------------
+# 20241206	Version 0.1 - First push to github			MAM
 
 DEFAULT_PARTITION="shared"
 GPU_PARTITIONS='caracol,bstgpu,gpu,neuron,gee,bstgpu2,bstgpu3'
