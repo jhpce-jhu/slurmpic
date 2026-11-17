@@ -1,11 +1,12 @@
 # slurmpic
 
-A program to provide status for the compute nodes in a SLURM cluster. The script basically takes the "sinfo" output and presents it in a more organized way.
+A SLURM cluster utility program to provide status and resource info. The script takes the "sinfo" output and presents it in a more organized way.  `slurmpic` provides a view of node status & per-{node,partition,cluster} resources consumed/available. See example output below.  It is being used on 2 SLURM clusters (versions 22.05.9 & 25.02) on Rocky 9.4 and 9.6,respectively.
 
 ## Customizations:
 
-The "slurmpic" script has been tested on 2 SLURM clusters, and the only customizations that have been needed are:
+The "slurmpic" script contains a number of local customizations that you will need to modify to make it work or reflect your feelings on how busy a node is. The latter are choices embedded in the code about what colors to use when displaying per-node resources. Colors used for node state attempt to distinguish between two categories: (in-service versus out-of-service) and (reachable versus unreachable).
 
+### Required to make it work
 - set the DEFAULT_PARTITION to be the default partition on your cluster
 - set GPU_PARTITIONS to be the partitions on your cluster that have GPUs
 
