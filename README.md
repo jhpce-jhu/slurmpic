@@ -4,31 +4,39 @@ A SLURM cluster utility program to provide status and resource info. The script 
 
 ## Customizations:
 
-The "slurmpic" script contains a number of local customizations that you will need to modify to make it work or reflect your feelings on how busy a node is. The latter are choices embedded in the code about what colors to use when displaying per-node resources. Colors used for node state attempt to distinguish between two categories: (in-service versus out-of-service) and (reachable versus unreachable).
+The "slurmpic" script contains a number of local customizations that you will need to modify to make it work, and then others you might choose to change to reflect your feelings on how busy (allocated) a node is before its font colors change. Slurmpic also contains decisions about what node states to display out of possibly many.  Colors used for node state attempt to distinguish between two categories: (in-service versus out-of-service) and (reachable versus unreachable).)
 
 ### Required to make it work
 - set the DEFAULT_PARTITION to be the default partition on your cluster
 - set GPU_PARTITIONS to be the partitions on your cluster that have GPUs
 
-
 ## Usage:
 
 ```console
 $ slurmpic --help
-slurmpic: Used to display a summary of JHPCE SLURM node usage
-Usage: slurmpic [-p|--partition PARTITION] [-a|--all] [-g|--gpu] [-r|--ramstats]
-       -p | --partition   Show information for a specific partition.
-                          The shared partition is shown by default.
-                          Summary statistics are for specified partition(s).
-                          Summary statistics exclude nodes in DOWN, DRAIN & RESERVED states.
-                          Per-node CPU/RAM used values are for all jobs on that node, from all partitions
-       -a | --all         Show information for all partitions.
-       -g | --gpu         Show information for all GPU partitions.
-       -r | --ramstats    Show extended information about RAM allocation.
-                          SYSFREEMEM not precise! It includes buffered/cached memory usage.
+slurmpic: Used to display a summary of SLURM node usage & status.
+               Terminal windows 90+ char wide best for viewing slurmpic output.
+               Summary stats at end are for specified partition(s), and
+               exclude values for nodes in DOWN, DRAIN & RESERVED states.
+               Per-node CPU/RAM used values are for all jobs from all partitions.
+
+slurmpic [ -p|--partition <name> ] [ -a|--all ] [ -g|--gpu ]
+slurmpic [ -k|--key ]
+slurmpic [ -h|--help ]
+
+ -p | --partition Show information for a specific PARTITION. Otherwise
+                  defaults to "shared" or what is specified in ~/.slurm/defaults
+ -a | --all       Show information for all partitions.
+                  Note: slurmpic uses sinfo, which will not display node info
+                  for partitions which require UNIX group membership (unless you
+                  are root or a member of those groups). For non-root users,
+                  slurmpic -a will not display those nodes (or count their resources).
+ -g | --gpu       Show information for all GPU partitions.
+ -k | --key       Guide to color meaning.
+ -h | --help      Display this information.
 ```
 
-## Example
+## Examples
 
 ```console
 $ slurmpic
@@ -62,7 +70,13 @@ NODENAME      NODESTATE CPUS_A/T CPU_LOAD  TOT_MEM FREEMEM SYSFREEMEM PARTITIONS
 Total Cores:    208 |Alloc Cores:     47 |Idle Cores:    161 |Core Usage: % 22
 Total RAM:  6131 GB |Alloc RAM:  2520 GB |Free RAM:  3611 GB |RAM Usage:  % 41
 Total GPUs:  29  | Total GPUs Used:  26
+
+$ slurmpic --key
+Color Key (resources): Red - Very low or none, Yellow - Sorta low, Green - OK
+Color Key (node state): Red - Unreachable, Blue - Not accepting jobs normally
+Color Key (node state): White - Idle
 ```
+
 And a screenshot showing output with colors...
 
 <img width="485" alt="Screenshot 2024-12-06 at 9 03 45 AM" src="https://github.com/user-attachments/assets/068a7659-07ea-41c4-811f-daeb3238525d">
