@@ -1,6 +1,11 @@
 # slurmpic
 
-A SLURM cluster utility program to provide status and resource info. The script takes the "sinfo" output and presents it in a more organized way.  `slurmpic` provides a view of node status & per-{node,partition,cluster} resources consumed/available. See example output below.  It is being used on 2 SLURM clusters (versions 22.05.9 & 25.02) on Rocky 9.4 and 9.6,respectively.
+A SLURM cluster utility program to provide status and resource info. The script uses the output of `sinfo` to provide views of
+
+- node status
+- per-{node,partition,cluster} resources consumed/available.
+
+See example output below.  It is being used on 2 SLURM clusters (versions 22.05.9 & 25.02) on Rocky 9.4 and 9.6,respectively.
 
 ## Customizations:
 
@@ -20,19 +25,21 @@ slurmpic: Used to display a summary of SLURM node usage & status.
                exclude values for nodes in DOWN, DRAIN & RESERVED states.
                Per-node CPU/RAM used values are for all jobs from all partitions.
 
-slurmpic [ -p|--partition <name> ] [ -a|--all ] [ -g|--gpu ]
+slurmpic [ -p|--partition <name>[,<name>... ] [ -a|--all ] [ -g|--gpu ]
 slurmpic [ -k|--key ]
 slurmpic [ -h|--help ]
 
- -p | --partition Show information for a specific PARTITION. Otherwise
-                  defaults to "shared" or what is specified in ~/.slurm/defaults
+ -p | --partition Show information for a specific PARTITION or a comma-separated
+                  list. Otherwise defaults to "shared" or what is
+                  specified in ~/.slurm/defaults
  -a | --all       Show information for all partitions.
                   Note: slurmpic uses sinfo, which will not display node info
                   for partitions which require UNIX group membership (unless you
                   are root or a member of those groups). For non-root users,
-                  slurmpic -a will not display those nodes (or count their resources).
- -g | --gpu       Show information for all GPU partitions.
- -k | --key       Guide to color meaning.
+                  "slurmpic -a" will not display those nodes (or count their resources).
+ -g | --gpu       When used alone, displays information for all GPU partitions.  Otherwise it
+                  adds GPU-specific columns & statistics.
+ -k | --key       Guide to color meaning for state & resources.
  -h | --help      Display this information.
 ```
 
