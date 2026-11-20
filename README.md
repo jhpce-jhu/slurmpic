@@ -84,6 +84,11 @@ Color Key (node state): Red - Unreachable, Blue - Not accepting jobs normally
 Color Key (node state): White - Idle
 ```
 
-And a screenshot showing output with colors...
+## Screenshots showing colored output
 
-<img width="485" alt="Screenshot 2024-12-06 at 9 03 45 AM" src="https://github.com/user-attachments/assets/068a7659-07ea-41c4-811f-daeb3238525d">
+### Single partition
+
+### All partitions
+
+### GPU Partitions
+
