@@ -9,11 +9,13 @@ See example output below.  It is being used on 2 SLURM clusters (versions 22.05.
 
 ## Customizations:
 
-The "slurmpic" script contains a number of local customizations that you will need to modify to make it work, and then others you might choose to change to reflect your feelings on how busy (allocated) a node is before its font colors change. Slurmpic also contains decisions about what node states to display out of possibly many.  Colors used for node state attempt to distinguish between two categories: (in-service versus out-of-service) and (reachable versus unreachable).)
+The "slurmpic" script contains a number of local customizations that you will need to modify to make it work, and then others you might choose to, for example, change to reflect your feelings on how busy (allocated) a node is before its font colors change. (Another choice we've embedded is excluding the CPU/RAM usage info from the overall statistics for DOWN, DRAIN, and RESERVED nodes.) 
+
+Slurmpic also contains decisions about what node states to display out of possibly many.  Colors used for node state attempt to distinguish between two categories: (in-service versus out-of-service) and (reachable versus unreachable).) For example, a reserved node will use blue font if it is reachable but red if one of its states is DOWN.
 
 ### Required to make it work
 - set the DEFAULT_PARTITION to be the default partition on your cluster
-- set GPU_PARTITIONS to be the partitions on your cluster that have GPUs
+- set GPU_PARTITIONS to be the partitions on your cluster that have GPUs (or just ignore the `--gpu` functionality)
 
 ## Usage:
 
@@ -87,6 +89,8 @@ Color Key (node state): White - Idle
 ## Screenshots showing colored output
 
 ### Single partition
+
+![slurmpic --partition scavenge](images/slurmpic-p-scavenge.png)
 
 ### All partitions
 
