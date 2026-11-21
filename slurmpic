@@ -2,7 +2,8 @@
 #
 # JHPCE - slurmpic - insight into node/cluster status
 
-#       Version: 1.0
+#       Version: 1.1
+
 #       slurmpic is a product of the JHPCE (Joint High Performance Computing
 #       Exchange) staff in the Dept of Biostatics, School of Public Health,
 #       Johns Hopkins University.
@@ -27,6 +28,7 @@
 #--------------------------------------------------------------------------
 # Date		Modification					   Initials
 #--------------------------------------------------------------------------
+# 20261120      Small changes mostly wording fixes.			JRT
 # 20261119	Pushed this copy up to GH repo as version 1.0 after     JRT
 #		further changes.
 # 20261117	Added default_partition(), revised usage(), removed     JRT
@@ -36,7 +38,9 @@
 # 2023????	Mark created.						MM
 #--------------------------------------------------------------------------
 
-whereami=`/usr/bin/hostname`
+# No longer used. If needed, consider using "my-cluster-is".
+#whereami=`/usr/bin/hostname`
+
 DEFAULT_PARTITION='shared'
 
 # Which partitions to display when user says -g | --gpu
@@ -57,15 +61,17 @@ $(basename "$0") [ -p|--partition <name>[,<name>... ] [ -a|--all ] [ -g|--gpu ]
 $(basename "$0") [ -h|--help ]
 $(basename "$0") [ -k|--key ]
 
- -p | --partition Show information for a specific PARTITION. Otherwise
-                  defaults to "$DEFAULT_PARTITION" or what is specified in ~/.slurm/defaults
+ -p | --partition Show information for a specific PARTITION or a comma-separated
+                  list. Otherwise defaults to "$DEFAULT_PARTITION" or what is
+		  specified in ~/.slurm/defaults
  -a | --all       Show information for all partitions.
                   Note: slurmpic uses sinfo, which will not display node info
                   for partitions which require UNIX group membership (unless you
                   are root or a member of those groups). For non-root users,
-                  slurmpic -a will not display those nodes (or count their resources).
- -g | --gpu       Show information for all GPU partitions.
- -k | --key       Guide to color meaning.
+                  "slurmpic -a" will not display those nodes (or count their resources).
+ -g | --gpu       When used alone, displays information for all GPU partitions.
+                  Otherwise it adds GPU-specific columns & statistics.
+ -k | --key       Guide to color meaning for state & resources.
  -h | --help      Display this information.
 EOF
 }
@@ -170,21 +176,17 @@ fi
 #   non-integers to zero decimal places. To handle places where printf does not
 #   handle them properly.
 
+# Approach used before v1.0:
 #sinfo -h $PARTITION -N -O  $SINFOOPTS | awk -v gpuvar="$GPUSTATS" 'BEGIN { OFMT = "%.0f" }; {
-# Get the data
-#echo "partition: " $PARTITION
-#echo "sinfoopts: " $SINFOOPTS
-#echo ""
-nodes=$(sinfo -h ${PARTITION} -N -O "${SINFOOPTS}")
 
-#echo "nodes: " $nodes
-#exit 7
+# Get the data
+nodes=$(sinfo -h ${PARTITION} -N -O "${SINFOOPTS}")
 
 # Process the data (using a "here string" (<<<) )
 awk -v gpuvar="$GPUSTATS" '
    BEGIN { OFMT = "%.0f" }
 
-   # main program section begins
+   # main awk program section begins
    {
 
    # awk variables
@@ -197,7 +199,8 @@ awk -v gpuvar="$GPUSTATS" '
    CYAN="\033[36m";
    WHITE="\033[37m";
 
-   # Numbering of awk output fields for default mode
+   # To help keep track when creating printf args
+   # DEFAULT MODE: Numbering of awk output fields 
    # $1 = Nodelist
    # $2 = StateComplete
    # $3 = Partition
@@ -207,11 +210,11 @@ awk -v gpuvar="$GPUSTATS" '
    # $7 = AllocMem
    # $8 = FreeMEM
 
-   # Numbering of awk output fields for GPU mode
+   # GPU MODE: Numbering of awk output fields
    # $9 = GPU Total  Format: gpu:tesv100:2,gpu:titanv:1
    # $10 = GPU Used  Format: gpu:tesv100:1(IDX:0),gpu:titanv:0(IDX:N/A)
 
-   # Print each node, choosing colors as you go line by line
+   # PRINT EACH NODE, CHOOSING COLORS AS YOU GO, CHAR BY CHAR
 
    if (LASTNODENAME == $1) { printf(",%s", $3); next; }
 
@@ -263,7 +266,6 @@ awk -v gpuvar="$GPUSTATS" '
        split($10,GPUUSEDARRAY,",")
        for (GPU in GPUUSEDARRAY) {
            split(GPUUSEDARRAY[GPU],GPUSPLIT,":")
-#          GPUCOUNT=gensub(/\(.*$/,//,GPUSPLIT[3])
            GPUUSED+=GPUSPLIT[3]
        }
        for (GPU in GPUTOTARRAY) {
@@ -274,7 +276,7 @@ awk -v gpuvar="$GPUSTATS" '
        GPUGRANDTOT+=GPUTOT
        GPUGRANDTOTUSED+=GPUUSED
 
-# MM - 2025-03-27 - Added GPU models to output by running scontrol command
+       # MM - 2025-03-27 - Added GPU models to output by running scontrol command
 
        command = "scontrol show node " $1 " | grep Gres= | cut -d= -f2 | sed \"s/gpu:/ /g\" | tr -d \" \"";
        command | getline GPUTYPES; close(command); 
