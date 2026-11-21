@@ -90,5 +90,16 @@ Color Key (node state): White - Idle
 
 ### All partitions
 
+Note: A customized version of slurmpic was used to display only specified nodes out of the output of `slurmpic -a`. The goal was to create a small image which showed various color-coding for node state and resources. The statistics at the bottom of the output are those for all nodes, not just this subset.
+
+![slurmpic --all](images/slurmpic-limited-all-opts.png)  
+
 ### GPU Partitions
 
+All of them:
+
+![slurmpic --all](images/slurmpic-g.png)
+
+Just one
+
+![slurmpic --gpu --partition bstgpu3](images/slurmpic-g-p.png)
